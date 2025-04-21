@@ -53,12 +53,14 @@
                 <executions>
                     <!-- This will prepare the JaCoCo agent -->
                     <execution>
+                        <id>prepare-agent</id> <!-- Unique execution ID -->
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
                     </execution>
                     <!-- This will generate the report -->
                     <execution>
+                        <id>generate-report</id> <!-- Unique execution ID -->
                         <goals>
                             <goal>report</goal>
                         </goals>
