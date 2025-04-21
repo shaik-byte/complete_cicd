@@ -30,7 +30,7 @@ jobs:
         run: mvn dependency:go-offline
 
   build:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: install
     steps:
       - uses: actions/checkout@v3
@@ -38,7 +38,7 @@ jobs:
         run: mvn clean install -DskipTests
 
   test:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: build
     steps:
       - uses: actions/checkout@v3
@@ -51,7 +51,7 @@ jobs:
           path: target/site/jacoco/
 
   sonarcloud:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: test
     steps:
       - uses: actions/checkout@v3
@@ -64,7 +64,7 @@ jobs:
           SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
 
   semgrep:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: sonarcloud
     steps:
       - uses: actions/checkout@v3
@@ -74,7 +74,7 @@ jobs:
           config: auto
 
   dependency-check:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: semgrep
     steps:
       - uses: actions/checkout@v3
@@ -87,7 +87,7 @@ jobs:
           severity: HIGH,CRITICAL
 
   malware-scan:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: dependency-check
     steps:
       - uses: actions/checkout@v3
@@ -101,7 +101,7 @@ jobs:
           path: malware-scan-results.txt
 
   image-build:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: malware-scan
     steps:
       - uses: actions/checkout@v3
@@ -111,14 +111,14 @@ jobs:
           docker images
 
   image-scan:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: image-build
     steps:
       - name: Trivy Docker Scan
         run: trivy image $DOCKER_REPO:latest
 
   image-push:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: image-scan
     steps:
       - name: Docker Login
@@ -127,7 +127,7 @@ jobs:
         run: docker push $DOCKER_REPO:latest
 
   deploy:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: image-push
     steps:
       - name: ArgoCD Deploy
@@ -140,7 +140,7 @@ jobs:
           argocd app wait app-java --health --operation
 
   dast:
-    runs-on: cicd
+    runs-on: self-hosted
     needs: deploy
     steps:
       - name: Run OWASP ZAP DAST Scan
