@@ -1,0 +1,155 @@
+name: Java CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+env:
+  DOCKER_REPO: shaikbyte/java-app
+  SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+  SONAR_PROJECT_KEY: your_sonar_project_key
+  SONAR_ORGANIZATION: your_sonar_org
+  ARGOCD_SERVER: 35.239.180.121:443
+  ARGOCD_USERNAME: admin
+  ARGOCD_PASSWORD: ${{ secrets.ARGOCD_PASSWORD }}
+
+jobs:
+
+  install:
+    runs-on: cicd
+    steps:
+      - uses: actions/checkout@v3
+      - name: Set up JDK
+        uses: actions/setup-java@v3
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+      - name: Install dependencies
+        run: mvn dependency:go-offline
+
+  build:
+    runs-on: cicd
+    needs: install
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build project
+        run: mvn clean install -DskipTests
+
+  test:
+    runs-on: cicd
+    needs: build
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Unit Tests
+        run: mvn test
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v3
+        with:
+          name: coverage-report
+          path: target/site/jacoco/
+
+  sonarcloud:
+    runs-on: cicd
+    needs: test
+    steps:
+      - uses: actions/checkout@v3
+      - name: SonarCloud Scan
+        uses: SonarSource/sonarcloud-github-action@v2
+        with:
+          projectKey: ${{ env.SONAR_PROJECT_KEY }}
+          organization: ${{ env.SONAR_ORGANIZATION }}
+        env:
+          SONAR_TOKEN: ${{ env.SONAR_TOKEN }}
+
+  semgrep:
+    runs-on: cicd
+    needs: sonarcloud
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run Semgrep
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto
+
+  dependency-check:
+    runs-on: cicd
+    needs: semgrep
+    steps:
+      - uses: actions/checkout@v3
+      - name: Trivy Scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: fs
+          scan-ref: .
+          format: table
+          severity: HIGH,CRITICAL
+
+  malware-scan:
+    runs-on: cicd
+    needs: dependency-check
+    steps:
+      - uses: actions/checkout@v3
+      - name: ClamAV Scan
+        run: |
+          sudo apt-get update && sudo apt-get install -y clamav
+          clamscan -r . | tee malware-scan-results.txt
+      - uses: actions/upload-artifact@v3
+        with:
+          name: malware-scan-results
+          path: malware-scan-results.txt
+
+  image-build:
+    runs-on: cicd
+    needs: malware-scan
+    steps:
+      - uses: actions/checkout@v3
+      - name: Build Docker image
+        run: |
+          docker build -t $DOCKER_REPO:latest .
+          docker images
+
+  image-scan:
+    runs-on: cicd
+    needs: image-build
+    steps:
+      - name: Trivy Docker Scan
+        run: trivy image $DOCKER_REPO:latest
+
+  image-push:
+    runs-on: cicd
+    needs: image-scan
+    steps:
+      - name: Docker Login
+        run: echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+      - name: Docker Push
+        run: docker push $DOCKER_REPO:latest
+
+  deploy:
+    runs-on: cicd
+    needs: image-push
+    steps:
+      - name: ArgoCD Deploy
+        run: |
+          curl -sLO https://github.com/argoproj/argo-cd/releases/latest/download/argocd-linux-amd64
+          chmod +x argocd-linux-amd64
+          sudo mv argocd-linux-amd64 /usr/local/bin/argocd
+          argocd login $ARGOCD_SERVER --username $ARGOCD_USERNAME --password $ARGOCD_PASSWORD --insecure
+          argocd app sync app-java
+          argocd app wait app-java --health --operation
+
+  dast:
+    runs-on: cicd
+    needs: deploy
+    steps:
+      - name: Run OWASP ZAP DAST Scan
+        run: |
+          mkdir -p owasp-zap-report
+          docker run -v $(pwd):/zap/wrk/:rw ghcr.io/zaproxy/zaproxy:stable zap.sh \
+            -cmd -quickurl http://your-service-url \
+            -quickout /zap/wrk/owasp-zap-report/report.html
+      - uses: actions/upload-artifact@v3
+        with:
+          name: zap-report
+          path: owasp-zap-report/
