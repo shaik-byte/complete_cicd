@@ -44,6 +44,28 @@
                     <mainClass>com.example.CodeKamikazeApplication</mainClass>
                 </configuration>
             </plugin>
+
+            <!-- JaCoCo Maven Plugin for code coverage -->
+            <plugin>
+                <groupId>org.jacoco</groupId>
+                <artifactId>jacoco-maven-plugin</artifactId>
+                <version>0.8.7</version> <!-- Use the latest version -->
+                <executions>
+                    <!-- This will prepare the JaCoCo agent -->
+                    <execution>
+                        <goals>
+                            <goal>prepare-agent</goal>
+                        </goals>
+                    </execution>
+                    <!-- This will generate the report -->
+                    <execution>
+                        <goals>
+                            <goal>report</goal>
+                        </goals>
+                        <phase>verify</phase> <!-- Run after tests -->
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 </project>
