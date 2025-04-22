@@ -54,6 +54,7 @@
                     <!-- Prepares JaCoCo agent before tests -->
                     <execution>
                         <id>prepare-agent</id>
+                        <phase>initialize</phase> <!-- Changed to initialize phase -->
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
