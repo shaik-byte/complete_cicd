@@ -44,7 +44,9 @@ jobs:
       - uses: actions/checkout@v3
       
       - name: Run Unit Tests
-        run: mvn test
+        run:  mvn clean verify
+      - name: Debug - List Coverage Files
+        run: ls -lR target/site/jacoco || echo "Directory not found"
         
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
