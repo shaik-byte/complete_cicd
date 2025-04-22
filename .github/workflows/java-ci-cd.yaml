@@ -53,12 +53,13 @@ jobs:
         run:  mvn clean verify
       - name: Debug - List Coverage Files
         run: ls -lR target/site/jacoco || echo "Directory not found"
-        
+      - name: Debug - List Coverage Files
+        run: ls -lR target/site/jacoco || echo "Directory not found"  
       - name: Upload Coverage Report
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: target/site/jacoco
+          path: target/site/jacoco/*
 
   sonarcloud:
     runs-on: self-hosted
