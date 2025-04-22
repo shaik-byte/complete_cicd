@@ -42,7 +42,13 @@ jobs:
     needs: build
     steps:
       - uses: actions/checkout@v3
-      
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+        
       - name: Run Unit Tests
         run:  mvn clean verify
       - name: Debug - List Coverage Files
@@ -52,7 +58,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: coverage-report
-          path: target/site/jacoco/**/*
+          path: target/site/jacoco
 
   sonarcloud:
     runs-on: self-hosted
