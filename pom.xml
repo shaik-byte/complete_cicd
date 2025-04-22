@@ -45,26 +45,26 @@
                 </configuration>
             </plugin>
 
-            <!-- JaCoCo Maven Plugin for code coverage -->
+            <!-- JaCoCo Plugin -->
             <plugin>
                 <groupId>org.jacoco</groupId>
                 <artifactId>jacoco-maven-plugin</artifactId>
-                <version>0.8.7</version> <!-- Use the latest version -->
+                <version>0.8.8</version> <!-- Use the latest stable version -->
                 <executions>
-                    <!-- This will prepare the JaCoCo agent -->
+                    <!-- Prepares JaCoCo agent before tests -->
                     <execution>
-                        <id>prepare-agent</id> <!-- Unique execution ID -->
+                        <id>prepare-agent</id>
                         <goals>
                             <goal>prepare-agent</goal>
                         </goals>
                     </execution>
-                    <!-- This will generate the report -->
+                    <!-- Generates report after test phase -->
                     <execution>
-                        <id>generate-report</id> <!-- Unique execution ID -->
+                        <id>report</id>
+                        <phase>verify</phase>
                         <goals>
                             <goal>report</goal>
                         </goals>
-                        <phase>verify</phase> <!-- Run after tests -->
                     </execution>
                 </executions>
             </plugin>
